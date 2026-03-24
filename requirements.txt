@@ -1,0 +1,15 @@
+# Aptitude contest — install: pip install -r requirements.txt
+# Use a virtual environment: py -m venv .venv && .venv\Scripts\activate
+
+# Web framework
+Django>=5.0,<7
+
+# Admin theme (see INSTALLED_APPS: "jazzmin")
+django-jazzmin>=3.0.0
+
+# Question bulk import (.xlsx)
+openpyxl>=3.1.0
+
+# Optional production (uncomment if needed):
+# gunicorn>=22.0
+# whitenoise>=6.0

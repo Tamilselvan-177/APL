@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+{% if promote_cutoff_url %}
+<form method="post" action="{{ promote_cutoff_url }}" style="display:inline-block;margin:8px 8px 0 0;">
+    {% csrf_token %}
+    <input type="submit" class="button default" style="background:#1d4ed8;color:#fff;padding:10px 14px;"
+           value="{% trans 'Promote everyone ≥ cutoff score → next round' %}" />
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,226 @@
+<!-- FILE: templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}Aptitude Contest{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#9333ea',
+                        secondary: '#ec4899',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #fafafa;
+            color: #111827;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .gradient-purple-pink {
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-block;
+            text-align: center;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+        
+        @media (min-width: 640px) {
+            .btn-primary { padding: 0.75rem 2rem; }
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(147, 51, 234, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #9333ea;
+            border: 2px solid #9333ea;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: transform 0.2s, background 0.2s;
+            display: inline-block;
+            text-align: center;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+        
+        @media (min-width: 640px) {
+            .btn-secondary { padding: 0.75rem 2rem; }
+        }
+        
+        .btn-secondary:hover {
+            background: #faf5ff;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+        
+        .answer-option {
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+            cursor: pointer;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: white;
+            touch-action: manipulation;
+        }
+        
+        .answer-option:hover {
+            border-color: #9333ea;
+            background-color: #faf5ff;
+        }
+        
+        .answer-option.selected {
+            border-color: #9333ea;
+            background: linear-gradient(135deg, #f3e8ff 0%, #fce7f3 100%);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col pb-[env(safe-area-inset-bottom)] overflow-x-hidden antialiased">
+    
+    <nav class="gradient-purple-pink shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-2 h-14 sm:h-16">
+                <a href="{% url 'home' %}" class="text-white text-lg sm:text-2xl font-bold hover:opacity-90 transition truncate min-w-0 pr-2">
+                    🧠 <span class="hidden sm:inline">Aptitude Contest</span><span class="sm:hidden">Contest</span>
+                </a>
+
+                <!-- Desktop links -->
+                <div class="hidden md:flex items-center gap-1 lg:gap-3 flex-shrink-0">
+                    <a href="{% url 'leaderboard' %}" class="text-white/95 hover:text-white px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition whitespace-nowrap">
+                        Leaderboard
+                    </a>
+                    {% if user.is_authenticated %}
+                        <span class="text-white/90 text-sm max-w-[140px] lg:max-w-xs truncate hidden lg:inline" title="{{ user.username }}">{{ user.username }}</span>
+                        <a href="{% url 'dashboard' %}" class="text-white hover:text-gray-100 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition">Dashboard</a>
+                        <a href="{% url 'logout' %}" class="text-white hover:text-gray-100 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition">Logout</a>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="text-white hover:text-gray-100 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition">Login</a>
+                        <a href="{% url 'register' %}" class="bg-white text-purple-600 hover:bg-gray-100 px-3 py-2 rounded-md text-sm font-semibold transition">Register</a>
+                    {% endif %}
+                </div>
+
+                <!-- Mobile menu toggle -->
+                <div class="md:hidden flex items-center gap-2 flex-shrink-0">
+                    <input type="checkbox" id="nav-toggle" class="sr-only" aria-expanded="false" aria-controls="nav-panel">
+                    <label for="nav-toggle" class="text-white p-2.5 rounded-lg border border-white/30 cursor-pointer select-none text-xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Open menu">
+                        ☰
+                    </label>
+                </div>
+            </div>
+
+            <!-- Mobile panel -->
+            <div id="nav-panel" class="hidden md:hidden flex-col gap-1 pb-4 border-t border-white/20 pt-2">
+                <a href="{% url 'leaderboard' %}" class="text-white py-3 px-2 rounded-lg hover:bg-white/10 font-medium">Leaderboard</a>
+                {% if user.is_authenticated %}
+                    <p class="text-white/80 text-sm px-2 py-1 truncate">Signed in as {{ user.username }}</p>
+                    <a href="{% url 'dashboard' %}" class="text-white py-3 px-2 rounded-lg hover:bg-white/10 font-medium">Dashboard</a>
+                    <a href="{% url 'logout' %}" class="text-white py-3 px-2 rounded-lg hover:bg-white/10 font-medium">Logout</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="text-white py-3 px-2 rounded-lg hover:bg-white/10 font-medium">Login</a>
+                    <a href="{% url 'register' %}" class="bg-white text-purple-600 py-3 px-2 rounded-lg font-semibold text-center mt-1">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-3 sm:mt-4">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'error' %}bg-red-100 border-red-500 text-red-800{% elif message.tags == 'success' %}bg-green-100 border-green-500 text-green-800{% elif message.tags == 'warning' %}bg-yellow-100 border-yellow-500 text-yellow-800{% else %}bg-blue-100 border-blue-500 text-blue-800{% endif %} border-l-4 p-3 sm:p-4 mb-3 rounded-lg shadow-sm text-sm sm:text-base">
+            <div class="flex items-start gap-2">
+                <span class="flex-shrink-0 mt-0.5">
+                    {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}✗{% elif message.tags == 'warning' %}⚠{% else %}ℹ{% endif %}
+                </span>
+                <span class="break-words">{{ message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <main class="flex-grow max-w-7xl mx-auto w-full min-w-0 px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="bg-gray-800 text-white mt-auto">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div class="flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-start">
+                <div>
+                    <p class="text-white font-semibold mb-1">Aptitude Contest</p>
+                    <p class="text-gray-400 text-sm">&copy; {% now "Y" %} · Weekly rounds &amp; leaderboard</p>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-6 text-sm">
+                    <a href="{% url 'home' %}" class="text-gray-300 hover:text-white py-2 sm:py-0 transition">Home</a>
+                    <a href="{% url 'leaderboard' %}" class="text-gray-300 hover:text-white py-2 sm:py-0 transition">Leaderboard</a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="text-gray-300 hover:text-white py-2 sm:py-0 transition">Dashboard</a>
+                    {% else %}
+                    <a href="{% url 'login' %}" class="text-gray-300 hover:text-white py-2 sm:py-0 transition">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        (function () {
+            var toggle = document.getElementById('nav-toggle');
+            var panel = document.getElementById('nav-panel');
+            if (!toggle || !panel) return;
+            toggle.addEventListener('change', function () {
+                var open = toggle.checked;
+                panel.classList.toggle('hidden', !open);
+                panel.classList.toggle('flex', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

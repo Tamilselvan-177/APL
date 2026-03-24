@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load contest_extras %}
+
+{% block title %}Home — Weekly Aptitude Contest{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-5xl mx-auto min-w-0 space-y-10 sm:space-y-14 pb-8">
+
+    <!-- Hero -->
+    <section class="text-center px-1 sm:px-0 pt-2 sm:pt-4">
+        <p class="text-sm sm:text-base font-semibold text-purple-600 uppercase tracking-wide mb-2">
+            Weekly schedule · Multi-round quiz
+        </p>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4">
+            <span class="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Aptitude Contest
+            </span>
+        </h1>
+        <p class="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+            Practice <strong>Quantitative</strong>, <strong>Logical</strong>, and <strong>Verbal</strong> reasoning in timed rounds.
+            Climb the leaderboard, review your <strong>answer sheet</strong> after each round, and advance when you meet the cutoff.
+        </p>
+
+        {% if active_week %}
+        <div class="inline-flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 rounded-xl bg-purple-50 border border-purple-200 text-left sm:text-center max-w-lg mx-auto">
+            <span class="text-2xl" aria-hidden="true">📅</span>
+            <div class="text-sm sm:text-base text-gray-800">
+                <span class="font-bold text-purple-800">{{ active_week.title }}</span>
+                {% if active_round %}
+                <span class="block sm:inline sm:before:content-['·'] sm:before:mx-2 text-gray-600">
+                    Active round: <strong>{{ active_round.round_name }}</strong>
+                </span>
+                {% else %}
+                <span class="block sm:inline text-amber-700 text-sm mt-1 sm:mt-0">Waiting for admin to activate a round.</span>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 max-w-md mx-auto">
+            No active week right now. Check back after the organizer opens the contest.
+        </p>
+        {% endif %}
+    </section>
+
+    <!-- CTA -->
+    <section class="flex flex-col sm:flex-row flex-wrap justify-center items-stretch sm:items-center gap-3 sm:gap-4 px-2">
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="btn-primary w-full sm:w-auto text-center py-3.5 sm:py-3 min-h-[48px] flex items-center justify-center">
+                Open dashboard
+            </a>
+            <a href="{% url 'leaderboard' %}" class="btn-secondary w-full sm:w-auto text-center py-3.5 sm:py-3 min-h-[48px] flex items-center justify-center">
+                Leaderboard
+            </a>
+        {% else %}
+            <a href="{% url 'register' %}" class="btn-primary w-full sm:w-auto text-center py-3.5 sm:py-3 min-h-[48px] flex items-center justify-center">
+                Create account
+            </a>
+            <a href="{% url 'login' %}" class="btn-secondary w-full sm:w-auto text-center py-3.5 sm:py-3 min-h-[48px] flex items-center justify-center">
+                Log in
+            </a>
+        {% endif %}
+    </section>
+
+    <!-- How it works -->
+    <section class="card p-5 sm:p-8">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 text-center sm:text-left">
+            How it works
+        </h2>
+        <ol class="grid gap-4 sm:gap-6 sm:grid-cols-2">
+            <li class="flex gap-3">
+                <span class="flex-shrink-0 w-9 h-9 rounded-full gradient-purple-pink text-white font-bold flex items-center justify-center text-sm">1</span>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Weekly schedule</h3>
+                    <p class="text-sm sm:text-base text-gray-600 mt-1">Each <strong>week</strong> has ordered <strong>rounds</strong>. Finish earlier rounds before the next unlocks.</p>
+                </div>
+            </li>
+            <li class="flex gap-3">
+                <span class="flex-shrink-0 w-9 h-9 rounded-full gradient-purple-pink text-white font-bold flex items-center justify-center text-sm">2</span>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Timed quiz</h3>
+                    <p class="text-sm sm:text-base text-gray-600 mt-1">Questions are shuffled for your attempt. Submit before the timer ends.</p>
+                </div>
+            </li>
+            <li class="flex gap-3">
+                <span class="flex-shrink-0 w-9 h-9 rounded-full gradient-purple-pink text-white font-bold flex items-center justify-center text-sm">3</span>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Results &amp; answer sheet</h3>
+                    <p class="text-sm sm:text-base text-gray-600 mt-1">See your score, full-round accuracy, and a color-coded <strong>answer sheet</strong> (correct in green, wrong picks in red).</p>
+                </div>
+            </li>
+            <li class="flex gap-3">
+                <span class="flex-shrink-0 w-9 h-9 rounded-full gradient-purple-pink text-white font-bold flex items-center justify-center text-sm">4</span>
+                <div>
+                    <h3 class="font-semibold text-gray-900">Promotion</h3>
+                    <p class="text-sm sm:text-base text-gray-600 mt-1">Admins may promote players who reach the <strong>cutoff score</strong> to the next round.</p>
+                </div>
+            </li>
+        </ol>
+    </section>
+
+    <!-- Categories -->
+    <section>
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 text-center">Question types</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <div class="card p-5 sm:p-6 border-2 border-purple-100 hover:border-purple-200 transition">
+                <div class="text-3xl sm:text-4xl mb-3" aria-hidden="true">📊</div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Quantitative</h3>
+                <p class="text-sm sm:text-base text-gray-600">Numbers, ratios, speed &amp; time, and data-style problems.</p>
+            </div>
+            <div class="card p-5 sm:p-6 border-2 border-purple-100 hover:border-purple-200 transition">
+                <div class="text-3xl sm:text-4xl mb-3" aria-hidden="true">🧩</div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Logical</h3>
+                <p class="text-sm sm:text-base text-gray-600">Deduction, patterns, and structured reasoning.</p>
+            </div>
+            <div class="card p-5 sm:p-6 border-2 border-purple-100 hover:border-purple-200 transition sm:col-span-1 col-span-1">
+                <div class="text-3xl sm:text-4xl mb-3" aria-hidden="true">📝</div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Verbal</h3>
+                <p class="text-sm sm:text-base text-gray-600">Vocabulary, comprehension, and verbal analysis.</p>
+            </div>
+        </div>
+    </section>
+
+    {% if rounds_preview %}
+    <section class="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 p-5 sm:p-8">
+        <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-4">This week&rsquo;s rounds</h2>
+        <ul class="space-y-2 sm:space-y-3">
+            {% for r in rounds_preview %}
+            <li class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm sm:text-base text-gray-800">
+                <span class="font-bold text-purple-700 tabular-nums">{{ r.order_number }}.</span>
+                <span class="font-semibold">{{ r.round_name }}</span>
+                <span class="text-gray-500 text-xs sm:text-sm w-full sm:w-auto sm:ml-1">
+                    {{ r.duration_seconds|duration_fmt }} timer · up to {{ r.total_questions }} questions
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}

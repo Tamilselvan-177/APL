@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+
+{% block title %}Round {{ round_number }} Quiz{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timer-warning { animation: pulse 1s infinite; }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    /* Question navigator */
+    .q-nav-btn {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        height: 2.75rem;
+        border-radius: 0.375rem; /* square tiles, slight corner radius */
+        font-weight: 700;
+        font-size: 0.875rem;
+        border: 2px solid transparent;
+        transition: transform 0.15s, box-shadow 0.15s;
+        cursor: pointer;
+    }
+    .q-nav-btn:hover:not(:disabled) { transform: scale(1.08); }
+    .q-nav-pending { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
+    .q-nav-correct { background: #16a34a; color: #fff; border-color: #15803d; }
+    .q-nav-wrong { background: #dc2626; color: #fff; border-color: #b91c1c; }
+    /* Current question — purple + pink ring */
+    .q-nav-current {
+        background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+        color: #fff;
+        border-color: transparent;
+        box-shadow: 0 0 0 3px #fff, 0 0 0 5px #c084fc, 0 0 0 8px #f9a8d4;
+    }
+    .question-panel { display: none; }
+    .question-panel.is-active { display: block; }
+    .question-card-inner {
+        border: 2px solid #e5e7eb;
+        border-radius: 0.75rem;
+        transition: border-color 0.3s, background 0.3s;
+    }
+    .question-card-inner.answered-correct {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+    .question-card-inner.answered-wrong {
+        border-color: #f87171;
+        background: #fef2f2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4 sm:space-y-6 w-full min-w-0">
+
+    <div class="card p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-xl sm:text-3xl font-bold text-gray-800 break-words">
+                    {% if active_round %}{{ active_round.round_name }}{% else %}Round {{ round_number }}{% endif %} Quiz
+                </h1>
+                <p class="text-gray-600 text-sm sm:text-base mt-1">Jump between questions anytime. Green = correct, red = wrong, purple = current.</p>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1">Question order is shuffled for your attempt.</p>
+            </div>
+            <div class="text-center sm:text-right flex-shrink-0 w-full sm:w-auto bg-purple-50/50 sm:bg-transparent rounded-lg py-2 sm:py-0">
+                <p class="text-xs sm:text-sm text-gray-500">Time remaining</p>
+                <div id="timer" class="text-3xl sm:text-4xl font-bold gradient-purple-pink bg-clip-text text-transparent tabular-nums">--:--</div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <div class="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Progress</span>
+                <span><span id="answered-count">0</span> / {{ quiz_rows|length }} answered</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="gradient-purple-pink h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1 2 3 … n navigator -->
+    <div class="card p-3 sm:p-4">
+        <p class="text-sm font-semibold text-gray-600 mb-3">Questions</p>
+        <div id="question-nav" class="flex flex-wrap gap-2 justify-center sm:justify-start">
+            {% for row in quiz_rows %}
+            {% with q=row.question sub=row.submission %}
+            <button type="button"
+                    class="q-nav-btn {% if sub %}{% if sub.is_correct %}q-nav-correct{% else %}q-nav-wrong{% endif %}{% else %}q-nav-pending{% endif %}{% if forloop.counter0 == 0 %} q-nav-current{% endif %}"
+                    data-index="{{ forloop.counter0 }}"
+                    data-qid="{{ q.id }}"
+                    aria-label="Question {{ forloop.counter }}">
+                {{ forloop.counter }}
+            </button>
+            {% endwith %}
+            {% endfor %}
+        </div>
+        <div class="flex flex-col-reverse sm:flex-row justify-between mt-4 gap-2 sm:gap-3">
+            <button type="button" id="btn-prev" class="px-4 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 min-h-[48px] sm:min-h-[44px] flex-1 sm:flex-none font-medium touch-manipulation">← Previous</button>
+            <button type="button" id="btn-next" class="px-4 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 min-h-[48px] sm:min-h-[44px] flex-1 sm:flex-none font-medium touch-manipulation">Next →</button>
+        </div>
+    </div>
+
+    <!-- One visible question at a time -->
+    <div id="question-panels">
+        {% for row in quiz_rows %}
+        {% with q=row.question sub=row.submission %}
+        <div class="question-panel {% if forloop.counter0 == 0 %}is-active{% endif %}"
+             data-index="{{ forloop.counter0 }}"
+             data-qid="{{ q.id }}">
+            <div class="question-card-inner card p-4 sm:p-6 {% if sub %}{% if sub.is_correct %}answered-correct{% else %}answered-wrong{% endif %}{% endif %}">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center flex-wrap gap-2 mb-2">
+                            <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">Q{{ forloop.counter }}</span>
+                            <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm">{{ q.get_category_display }}</span>
+                            <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">{{ q.points }} pts</span>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-800 break-words">{{ q.question_text }}</h3>
+                    </div>
+                </div>
+
+                {% if sub %}
+                <div class="rounded-lg p-4 {% if sub.is_correct %}bg-green-50 border-2 border-green-500{% else %}bg-red-50 border-2 border-red-400{% endif %}">
+                    <p class="font-semibold {% if sub.is_correct %}text-green-800{% else %}text-red-800{% endif %}">
+                        {% if sub.is_correct %}✓ Correct{% else %}✗ Incorrect{% endif %}
+                    </p>
+                    <p class="text-sm mt-1 text-gray-700">Your answer: <strong>{{ sub.selected_answer }}</strong></p>
+                    {% if not sub.is_correct %}
+                    <p class="text-sm text-green-700 mt-1">Correct: <strong>{{ q.correct_answer }}</strong></p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="space-y-3 options-wrap" data-question-id="{{ q.id }}">
+                    <label class="answer-option flex items-start space-x-3 cursor-pointer">
+                        <input type="radio" name="question_{{ q.id }}" value="A" class="mt-1 h-5 w-5 text-purple-600">
+                        <span class="flex-1"><span class="font-semibold text-gray-700">A.</span> {{ q.option_a }}</span>
+                    </label>
+                    <label class="answer-option flex items-start space-x-3 cursor-pointer">
+                        <input type="radio" name="question_{{ q.id }}" value="B" class="mt-1 h-5 w-5 text-purple-600">
+                        <span class="flex-1"><span class="font-semibold text-gray-700">B.</span> {{ q.option_b }}</span>
+                    </label>
+                    <label class="answer-option flex items-start space-x-3 cursor-pointer">
+                        <input type="radio" name="question_{{ q.id }}" value="C" class="mt-1 h-5 w-5 text-purple-600">
+                        <span class="flex-1"><span class="font-semibold text-gray-700">C.</span> {{ q.option_c }}</span>
+                    </label>
+                    <label class="answer-option flex items-start space-x-3 cursor-pointer">
+                        <input type="radio" name="question_{{ q.id }}" value="D" class="mt-1 h-5 w-5 text-purple-600">
+                        <span class="flex-1"><span class="font-semibold text-gray-700">D.</span> {{ q.option_d }}</span>
+                    </label>
+                </div>
+                <button type="button" onclick="submitAnswer({{ q.id }})" class="btn-primary mt-4 w-full sm:w-auto min-h-[48px]" id="submit-btn-{{ q.id }}">Submit Answer</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+
+    <div class="card p-4 sm:p-6 text-center">
+        <p class="text-gray-600 mb-4 text-sm sm:text-base px-1">Finish when you’ve answered every question (or when time runs out).</p>
+        <form method="POST" action="{% url 'submit_quiz' round_number %}" id="submit-quiz-form">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary text-base sm:text-lg px-6 sm:px-8 py-3.5 sm:py-3 w-full sm:w-auto min-h-[52px]">Submit Quiz &amp; View Results</button>
+        </form>
+    </div>
+</div>
+
+<div id="quiz-data"
+     data-round="{{ round_number }}"
+     data-remaining="{{ remaining_seconds }}"
+     data-csrf="{{ csrf_token }}"
+     data-total="{{ quiz_rows|length }}"
+     style="display: none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const quizData = document.getElementById('quiz-data');
+    const roundNumber = quizData.dataset.round;
+    let remainingSeconds = parseInt(quizData.dataset.remaining, 10);
+    const csrfToken = quizData.dataset.csrf;
+    const totalQuestions = parseInt(quizData.dataset.total, 10) || 0;
+
+    let currentIndex = 0;
+    const timerElement = document.getElementById('timer');
+    let timerInterval;
+
+    function getNavButtons() {
+        return document.querySelectorAll('#question-nav .q-nav-btn');
+    }
+
+    function syncNavCurrent() {
+        getNavButtons().forEach((btn, i) => {
+            btn.classList.toggle('q-nav-current', i === currentIndex);
+        });
+    }
+
+    function showQuestion(index) {
+        if (index < 0 || index >= totalQuestions) return;
+        currentIndex = index;
+        document.querySelectorAll('.question-panel').forEach((panel, i) => {
+            panel.classList.toggle('is-active', i === currentIndex);
+        });
+        syncNavCurrent();
+    }
+
+    function startTimer() {
+        function tick() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            timerElement.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            if (remainingSeconds < 300) timerElement.style.color = '#ef4444';
+        }
+        tick();
+        timerInterval = setInterval(() => {
+            remainingSeconds--;
+            tick();
+            if (remainingSeconds === 300) {
+                timerElement.classList.add('timer-warning');
+                alert('⚠️ 5 minutes remaining!');
+            }
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                alert('⏰ Time\'s up! Auto-submitting your quiz...');
+                document.getElementById('submit-quiz-form').submit();
+            }
+        }, 1000);
+    }
+
+    function updateProgress() {
+        const answered = document.querySelectorAll('.q-nav-correct, .q-nav-wrong').length;
+        const navTotal = getNavButtons().length;
+        const pct = navTotal ? (answered / navTotal) * 100 : 0;
+        document.getElementById('answered-count').textContent = answered;
+        document.getElementById('progress-bar').style.width = pct + '%';
+    }
+
+    window.submitAnswer = async function(questionId) {
+        const selectedOption = document.querySelector(`input[name="question_${questionId}"]:checked`);
+        if (!selectedOption) {
+            alert('Please select an answer!');
+            return;
+        }
+        const submitBtn = document.getElementById(`submit-btn-${questionId}`);
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+        }
+        try {
+            const response = await fetch('/submit-answer/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    question_id: questionId,
+                    selected_answer: selectedOption.value,
+                    time_taken: 0
+                })
+            });
+            const data = await response.json();
+            if (!data.success) {
+                alert('Error: ' + data.message);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Answer';
+                }
+                return;
+            }
+
+            const panel = document.querySelector(`.question-panel[data-qid="${questionId}"]`);
+            const inner = panel ? panel.querySelector('.question-card-inner') : null;
+            const navBtn = document.querySelector(`#question-nav .q-nav-btn[data-qid="${questionId}"]`);
+
+            if (navBtn) {
+                navBtn.classList.remove('q-nav-pending');
+                navBtn.classList.add(data.is_correct ? 'q-nav-correct' : 'q-nav-wrong');
+            }
+            if (inner) {
+                inner.classList.remove('answered-correct', 'answered-wrong');
+                inner.classList.add(data.is_correct ? 'answered-correct' : 'answered-wrong');
+            }
+
+            const optsWrap = panel ? panel.querySelector('.options-wrap') : null;
+            if (optsWrap) {
+                const sym = data.is_correct ? '✓ Correct' : '✗ Incorrect';
+                const pts = data.is_correct ? `+${data.points_earned} points` : '0 points';
+                const correctLine = (!data.is_correct && data.correct_answer)
+                    ? `<p class="text-sm text-green-700 mt-1">Correct answer: <strong>${data.correct_answer}</strong></p>` : '';
+                optsWrap.outerHTML = `
+                    <div class="rounded-lg p-4 ${data.is_correct ? 'bg-green-50 border-2 border-green-500' : 'bg-red-50 border-2 border-red-400'}">
+                        <p class="font-semibold ${data.is_correct ? 'text-green-800' : 'text-red-800'}">${sym}</p>
+                        <p class="text-sm mt-1 text-gray-700">Your answer: <strong>${selectedOption.value}</strong></p>
+                        ${correctLine}
+                        <p class="text-sm mt-1 ${data.is_correct ? 'text-green-700' : 'text-red-700'}">${pts}</p>
+                    </div>`;
+            }
+            if (submitBtn) submitBtn.remove();
+
+            syncNavCurrent();
+            updateProgress();
+            showNotification(data.is_correct ? 'Correct!' : 'Incorrect', data.is_correct);
+
+            // Optional: move to next unanswered
+            let next = currentIndex + 1;
+            while (next < totalQuestions) {
+                const b = getNavButtons()[next];
+                if (b && b.classList.contains('q-nav-pending')) {
+                    showQuestion(next);
+                    break;
+                }
+                next++;
+            }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred. Please try again.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Answer';
+            }
+        }
+    };
+
+    function showNotification(message, ok) {
+        const n = document.createElement('div');
+        n.className = `fixed bottom-4 left-4 right-4 sm:bottom-auto sm:left-auto sm:top-20 sm:right-4 sm:max-w-sm mx-auto sm:mx-0 ${ok ? 'bg-green-500' : 'bg-red-500'} text-white px-4 py-3 rounded-lg shadow-lg z-50 text-center text-sm sm:text-base`;
+        n.textContent = message;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 2500);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        startTimer();
+        updateProgress();
+
+        document.getElementById('question-nav').addEventListener('click', function(e) {
+            const btn = e.target.closest('.q-nav-btn');
+            if (!btn) return;
+            const idx = parseInt(btn.dataset.index, 10);
+            showQuestion(idx);
+        });
+
+        document.getElementById('btn-prev').addEventListener('click', function() {
+            showQuestion(currentIndex - 1);
+        });
+        document.getElementById('btn-next').addEventListener('click', function() {
+            showQuestion(currentIndex + 1);
+        });
+
+        window.addEventListener('beforeunload', function(e) {
+            if (remainingSeconds > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

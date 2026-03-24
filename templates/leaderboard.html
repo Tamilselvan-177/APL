@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load contest_extras %}
+
+{% block title %}Leaderboard - Aptitude Contest{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); }
+    .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #e9b872 100%); }
+    .current-user { background: linear-gradient(135deg, #f3e8ff 0%, #fce7f3 100%); border: 3px solid #9333ea; }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .leaderboard-row {
+        animation: slideIn 0.5s ease-out forwards;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4 sm:space-y-6 w-full min-w-0">
+
+    <!-- Header -->
+    <div class="card p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">🏆 Live Leaderboard</h1>
+                <p class="text-gray-600 text-sm sm:text-base break-words mt-1">
+                    {% if leaderboard_all_weeks_total %}
+                        <span class="font-semibold text-gray-800">All weeks — cumulative total</span>
+                        <span class="block sm:inline sm:ml-1 text-gray-600">
+                            Includes scores from previous events and the current active week.
+                        </span>
+                        {% if active_week %}
+                        <span class="block text-sm text-purple-700 mt-1">Active week for play: <strong>{{ active_week.title }}</strong></span>
+                        {% endif %}
+                    {% elif active_week %}
+                        <strong>{{ active_week.title }}</strong>
+                        {% if scope_round %}
+                            · <span class="text-purple-700 font-semibold">{{ scope_round.round_name }}</span> only
+                        {% endif %}
+                    {% else %}
+                        <span class="text-amber-800 font-medium">No week is active for play.</span>
+                        <span class="block text-gray-600 text-sm mt-1">Cumulative scores (all past weeks) still appear below. Activate a week in admin to filter by round.</span>
+                    {% endif %}
+                </p>
+                {% if active_week %}
+                <form method="get" class="mt-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+                    <label for="round_id" class="text-sm text-gray-600 sm:pt-2">Scoreboard:</label>
+                    <select name="round_id" id="round_id" class="border rounded-lg px-3 py-2.5 text-base text-gray-800 w-full sm:w-auto sm:min-w-[200px] max-w-full">
+                        <option value="" {% if not scope_round %}selected{% endif %}>All weeks total (cumulative)</option>
+                        {% for r in round_options %}
+                        <option value="{{ r.pk }}" {% if scope_round and scope_round.pk == r.pk %}selected{% endif %}>
+                            {{ r.order_number }}. {{ r.round_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn-primary text-sm py-3 sm:py-2 px-4 w-full sm:w-auto min-h-[44px]">Apply</button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="text-left sm:text-right flex-shrink-0">
+                <p class="text-sm text-gray-500">Your rank (this view)</p>
+                <p class="text-3xl sm:text-4xl font-bold gradient-purple-pink bg-clip-text text-transparent tabular-nums">
+                    {% if your_rank %}#{{ your_rank }}{% else %}—{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div class="card p-4 sm:p-6">
+            <p class="text-gray-500 text-sm">Total Participants</p>
+            <p class="text-3xl font-bold text-purple-600">{{ participants|length }}</p>
+        </div>
+        <div class="card p-4 sm:p-6">
+            <p class="text-gray-500 text-sm">Your {{ score_label }}</p>
+            <p class="text-3xl font-bold text-pink-600">{{ your_board_score }}</p>
+        </div>
+        <div class="card p-4 sm:p-6">
+            <p class="text-gray-500 text-sm">Top {{ score_label }}</p>
+            <p class="text-3xl font-bold text-indigo-600">
+                {% if participants %}{{ participants.0.leaderboard_score }}{% else %}0{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div class="card overflow-hidden">
+        <div class="overflow-x-auto -mx-px">
+        <table class="w-full min-w-[560px] sm:min-w-[640px]">
+            <thead class="gradient-purple-pink text-white">
+                <tr>
+                    <th class="px-2 py-3 sm:px-6 sm:py-4 text-left text-xs sm:text-sm">Rank</th>
+                    <th class="px-2 py-3 sm:px-6 sm:py-4 text-left text-xs sm:text-sm">Participant</th>
+                    <th class="px-2 py-3 sm:px-6 sm:py-4 text-center text-xs sm:text-sm">{{ score_label }}</th>
+                    <th class="px-2 py-3 sm:px-6 sm:py-4 text-center text-xs sm:text-sm">Round</th>
+                    <th class="px-2 py-3 sm:px-6 sm:py-4 text-center text-xs sm:text-sm">Time</th>
+                    <th class="px-2 py-3 sm:px-6 sm:py-4 text-center text-xs sm:text-sm">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for participant in participants %}
+                <tr class="leaderboard-row border-b {% if participant.user.id == user.id %}current-user{% endif %}"
+                    style="animation-delay: {{ forloop.counter0 }}0ms">
+
+                    <td class="px-2 py-3 sm:px-6 sm:py-4 font-bold tabular-nums text-sm sm:text-base">{{ forloop.counter }}</td>
+
+                    <td class="px-2 py-3 sm:px-6 sm:py-4 min-w-0 max-w-[11rem] sm:max-w-none">
+                        <p class="font-bold text-sm sm:text-base break-words" title="{{ participant.full_name }}">{{ participant.full_name }}
+                            {% if participant.user.id == user.id %}
+                                <span class="text-purple-600 text-sm">(You)</span>
+                            {% endif %}
+                        </p>
+                        <p class="text-xs sm:text-sm text-gray-500 truncate" title="@{{ participant.user.username }}">@{{ participant.user.username }}</p>
+                    </td>
+
+                    <td class="px-2 py-3 sm:px-6 sm:py-4 text-center">
+                        <span class="inline-block gradient-purple-pink text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-xs sm:text-sm tabular-nums">
+                            {{ participant.leaderboard_score }}
+                        </span>
+                    </td>
+
+                    <td class="px-2 py-3 sm:px-6 sm:py-4 text-center text-xs sm:text-sm whitespace-nowrap">
+                        R{{ participant.current_round }}
+                    </td>
+
+                    <td class="px-2 py-3 sm:px-6 sm:py-4 text-center text-xs sm:text-sm whitespace-nowrap">
+                        {{ participant.total_time_taken|duration_fmt }}
+                    </td>
+
+                    <td class="px-2 py-3 sm:px-6 sm:py-4 text-center">
+                        {% if participant.round2_completed %}
+                            <span class="bg-green-100 text-green-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm whitespace-nowrap">Complete</span>
+                        {% elif participant.round1_completed %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm whitespace-nowrap">In progress</span>
+                        {% else %}
+                            <span class="bg-gray-100 text-gray-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm whitespace-nowrap">Not started</span>
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center p-6 text-gray-500">
+                        No participants yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

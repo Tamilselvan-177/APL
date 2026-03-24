@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load contest_extras %}
+
+{% block title %}Round {{ round_number }} Results{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-4 sm:space-y-6 w-full min-w-0">
+    
+    <!-- Results Header -->
+    <div class="card p-4 sm:p-8 text-center">
+        <div class="text-4xl sm:text-6xl mb-4">
+            {% if bar_accuracy >= 80 %}🏆{% elif bar_accuracy >= 60 %}🎉{% elif bar_accuracy >= 40 %}👍{% else %}📚{% endif %}
+        </div>
+        <h1 class="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 px-1">Round {{ round_number }} complete!</h1>
+        <p class="text-gray-600 text-sm sm:text-base">Here&rsquo;s how you performed</p>
+    </div>
+
+    <!-- Score Overview -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+        <div class="card p-3 sm:p-6 text-center">
+            <div class="text-3xl mb-2">📊</div>
+            <p class="text-sm text-gray-500">Total Score</p>
+            <p class="text-2xl sm:text-3xl font-bold gradient-purple-pink bg-clip-text text-transparent tabular-nums">
+                {{ attempt.total_score }}
+            </p>
+        </div>
+
+        <div class="card p-3 sm:p-6 text-center">
+            <div class="text-3xl mb-2">✓</div>
+            <p class="text-sm text-gray-500">Correct</p>
+            <p class="text-2xl sm:text-3xl font-bold text-green-600 tabular-nums">{{ correct_count }}</p>
+        </div>
+
+        <div class="card p-3 sm:p-6 text-center">
+            <div class="text-3xl mb-2">✗</div>
+            <p class="text-sm text-gray-500">Wrong</p>
+            <p class="text-2xl sm:text-3xl font-bold text-red-600 tabular-nums">{{ wrong_count }}</p>
+        </div>
+
+        <div class="card p-3 sm:p-6 text-center col-span-2 md:col-span-1">
+            <div class="text-3xl mb-2">⏱️</div>
+            <p class="text-sm text-gray-500">Time Taken</p>
+            <p class="text-lg sm:text-2xl font-bold text-indigo-600 break-words leading-tight">{{ attempt.time_taken|duration_fmt }}</p>
+        </div>
+    </div>
+
+    <div class="card p-3 sm:p-4 bg-slate-50 border border-slate-200 text-center text-xs sm:text-sm text-gray-700">
+        {% if quiz_length %}
+            This round has <strong>{{ quiz_length }}</strong> question{{ quiz_length|pluralize }} (from admin).
+            You submitted answers for <strong>{{ attempted_count }}</strong>.
+            {% if unanswered_in_round and unanswered_in_round > 0 %}
+                <span class="text-amber-800 font-medium">{{ unanswered_in_round }} not answered.</span>
+            {% endif %}
+        {% else %}
+            You answered <strong>{{ attempted_count }}</strong> question{{ attempted_count|pluralize }}.
+        {% endif %}
+        <span class="block mt-1 text-gray-600">
+            <strong>{{ correct_count }}</strong> correct out of <strong>{{ attempted_count }}</strong> attempted
+            {% if quiz_length %}· <strong>{{ round_accuracy }}%</strong> of the full round ({{ correct_count }}/{{ quiz_length }}){% endif %}
+        </span>
+    </div>
+
+    <!-- Progress bar = same metric as "X% of the full round" above -->
+    <div class="card p-4 sm:p-6">
+        <h2 class="text-lg sm:text-xl font-bold mb-1">
+            {% if quiz_length %}Round score{% else %}Answer accuracy{% endif %}
+        </h2>
+        <p class="text-sm text-gray-500 mb-2">
+            {% if quiz_length %}
+                Correct answers out of all <strong>{{ quiz_length }}</strong> questions in this round (same as the percentage in the gray summary above).
+            {% else %}
+                Share of your submitted answers that were correct.
+            {% endif %}
+        </p>
+        {% if quiz_length and attempted_count %}
+        <p class="text-sm text-gray-600 mb-4">
+            Of the <strong>{{ attempted_count }}</strong> you answered: <strong>{{ answer_accuracy }}%</strong> correct ({{ correct_count }}/{{ attempted_count }}).
+        </p>
+        {% elif quiz_length and not attempted_count %}
+        <p class="text-sm text-gray-600 mb-4">No answers submitted for this round.</p>
+        {% else %}
+        <p class="text-sm text-gray-500 mb-4">&nbsp;</p>
+        {% endif %}
+        <div class="relative">
+            <p class="text-center text-sm font-semibold text-gray-700 mb-1 sm:hidden">{{ bar_accuracy }}%</p>
+            <div class="w-full bg-gray-200 rounded-full h-8 sm:h-9 overflow-hidden">
+                <div class="h-full rounded-full flex items-center justify-center text-white font-bold transition-all duration-1000 text-xs sm:text-sm min-w-0 px-1"
+                     style="width: {{ bar_accuracy }}%; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);"
+                     title="{{ bar_accuracy }}%">
+                    <span class="hidden sm:inline">{{ bar_accuracy }}%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <p class="text-gray-600">
+                {% if bar_accuracy >= 80 %}
+                    🌟 Excellent Performance! You're a star!
+                {% elif bar_accuracy >= 60 %}
+                    👏 Great Job! Keep it up!
+                {% elif bar_accuracy >= 40 %}
+                    💪 Good Effort! Room for improvement!
+                {% else %}
+                    📖 Keep Practicing! You'll get better!
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Detailed Results -->
+    <div class="card p-4 sm:p-6">
+        <h2 class="text-xl sm:text-2xl font-bold mb-4">Detailed Results</h2>
+        
+        <div class="space-y-4">
+            {% for submission in submissions %}
+            <div class="border-2 rounded-lg p-3 sm:p-4 {% if submission.is_correct %}border-green-300 bg-green-50{% else %}border-red-300 bg-red-50{% endif %}">
+                <div class="flex justify-between items-start gap-2 mb-2">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="{% if submission.is_correct %}bg-green-500{% else %}bg-red-500{% endif %} text-white px-2 py-1 rounded text-sm font-bold">
+                                Q{{ forloop.counter }}
+                            </span>
+                            <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm">
+                                {{ submission.question.get_category_display }}
+                            </span>
+                        </div>
+                        <p class="font-semibold text-gray-800 text-sm sm:text-base break-words">{{ submission.question.question_text }}</p>
+                    </div>
+                    <div class="text-2xl">
+                        {% if submission.is_correct %}✓{% else %}✗{% endif %}
+                    </div>
+                </div>
+                
+                <div class="mt-3 space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-semibold text-gray-600">Your Answer:</span>
+                        <span class="{% if submission.is_correct %}text-green-700{% else %}text-red-700{% endif %} font-bold">
+                            {{ submission.selected_answer }}
+                        </span>
+                    </div>
+                    
+                    {% if not submission.is_correct %}
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-semibold text-gray-600">Correct Answer:</span>
+                        <span class="text-green-700 font-bold">{{ submission.question.correct_answer }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-semibold text-gray-600">Points:</span>
+                        <span class="font-bold">
+                            {% if submission.is_correct %}+{{ submission.points_earned }}{% else %}0{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Category Performance -->
+    <div class="card p-4 sm:p-6">
+        <h2 class="text-xl sm:text-2xl font-bold mb-4">Performance by Category</h2>
+
+        <div class="space-y-4">
+            {% for cat in category_breakdown %}
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-semibold text-gray-700">
+                        {% if cat.key == 'quantitative' %}📊 {% elif cat.key == 'logical' %}🧩 {% elif cat.key == 'verbal' %}📝 {% endif %}
+                        {{ cat.label }}
+                    </span>
+                    <span class="text-sm text-gray-600">
+                        {{ cat.correct }} / {{ cat.total }} correct
+                    </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div class="gradient-purple-pink h-3 rounded-full transition-all duration-500" style="width: {{ cat.percentage }}%"></div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-gray-500">No category data.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        <a href="{% url 'quiz_answer_sheet' round_number %}" class="btn-primary text-center flex-1 min-h-[48px] flex items-center justify-center">
+            View answer sheet
+        </a>
+        <a href="{% url 'dashboard' %}" class="btn-secondary text-center flex-1 min-h-[48px] flex items-center justify-center">
+            Back to Dashboard
+        </a>
+        <a href="{% url 'leaderboard' %}" class="btn-secondary text-center flex-1 min-h-[48px] flex items-center justify-center">
+            View Leaderboard
+        </a>
+    </div>
+
+</div>
+
+<script>
+    // Add animation on load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate accuracy bar
+        const accuracyBar = document.querySelector('[style*="width: {{ bar_accuracy }}%"]');
+        if (accuracyBar) {
+            accuracyBar.style.width = '0%';
+            setTimeout(() => {
+                accuracyBar.style.width = '{{ bar_accuracy }}%';
+            }, 500);
+        }
+    });
+</script>
+{% endblock %}
