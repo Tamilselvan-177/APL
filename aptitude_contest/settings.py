@@ -4,9 +4,9 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-your-secret-key-change-in-production'
+SECRET_KEY = 'arq-contest-KEY-IF-YOU-ARE-READING-THIS-YOUR-KEY-IS-IN-DANGER-I-KNOW'
 
-DEBUG = True
+DEBUG = False
 
 # Host header is ONLY the domain (no "https://"). ngrok URLs change each run unless you use a reserved domain.
 ALLOWED_HOSTS = [
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -97,7 +98,6 @@ JAZZMIN_SETTINGS = {
     },
     # Use "cyborg" for a deeper black background than "darkly"
     "theme": "cyborg",
-    "dark_mode_theme": "cyborg",
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -116,8 +116,8 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_small_text": False,
     "brand_small_text": False,
     
-    # Dark Mode Toggles
-    "dark_mode_theme": "cyborg",
+    # Dark UI (replaces deprecated dark_mode_theme in Jazzmin 3+)
+    "default_theme_mode": "dark",
     "layout_boxed": False,
 }
 
@@ -145,6 +145,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Required when DEBUG=False: Django does not serve /static/; WhiteNoise does.
+# True = use app static (Jazzmin) without running collectstatic (fine for dev/ngrok).
+# In production after collectstatic, set DJANGO_WHITENOISE_FINDERS=false for efficiency.
+WHITENOISE_USE_FINDERS = os.environ.get(
+    "DJANGO_WHITENOISE_FINDERS", "true"
+).lower() in ("1", "true", "yes")
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

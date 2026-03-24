@@ -10,6 +10,8 @@ django-jazzmin>=3.0.0
 # Question bulk import (.xlsx)
 openpyxl>=3.1.0
 
-# Optional production (uncomment if needed):
+# Static files when DEBUG=False (admin / Jazzmin CSS & JS)
+whitenoise>=6.0
+
+# Optional production:
 # gunicorn>=22.0
-# whitenoise>=6.0
