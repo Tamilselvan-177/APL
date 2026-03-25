@@ -14,7 +14,9 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "metastatic-nonrevoltingly-maryalice.ngrok-free.dev",
     ".ngrok-free.dev",  # any *.ngrok-free.dev tunnel (free tier)
-    '172.16.78.233',
+    "apl-1-kqah.onrender.com",
+    ".onrender.com",  # other Render services / preview deploys
+    "172.16.78.233",
 ]
 
 # Required for POST/login behind HTTPS (e.g. ngrok). Include scheme — unlike ALLOWED_HOSTS.
@@ -24,6 +26,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://metastatic-nonrevoltingly-maryalice.ngrok-free.dev",
+    "https://apl-1-kqah.onrender.com",
 ]
 _extra_csrf = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 if _extra_csrf:
