@@ -15,3 +15,4 @@ whitenoise>=6.0
 
 # Optional production:
  gunicorn>=22.0
+uvicorn

@@ -14,11 +14,13 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "metastatic-nonrevoltingly-maryalice.ngrok-free.dev",
     ".ngrok-free.dev",  # any *.ngrok-free.dev tunnel (free tier)
+    '172.16.78.233',
 ]
 
 # Required for POST/login behind HTTPS (e.g. ngrok). Include scheme — unlike ALLOWED_HOSTS.
 # When ngrok gives a new URL, add it here (or set env DJANGO_CSRF_TRUSTED_ORIGINS=comma-separated).
 CSRF_TRUSTED_ORIGINS = [
+    "http://172.16.78.233:80",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://metastatic-nonrevoltingly-maryalice.ngrok-free.dev",
