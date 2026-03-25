@@ -16,6 +16,7 @@ ALLOWED_HOSTS = [
     ".ngrok-free.dev",  # any *.ngrok-free.dev tunnel (free tier)
     "apl-1-kqah.onrender.com",
     ".onrender.com",  # other Render services / preview deploys
+    "apl-gules.vercel.app",
     "172.16.78.233",
 ]
 
@@ -27,6 +28,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "https://metastatic-nonrevoltingly-maryalice.ngrok-free.dev",
     "https://apl-1-kqah.onrender.com",
+    "https://apl-gules.vercel.app",
 ]
 _extra_csrf = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 if _extra_csrf:
