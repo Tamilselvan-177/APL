@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'arq-contest-KEY-IF-YOU-ARE-READING-THIS-YOUR-KEY-IS-IN-DANGER-I-KNOW'
 
-DEBUG = False
+DEBUG = True
 
 # Host header is ONLY the domain (no "https://"). ngrok URLs change each run unless you use a reserved domain.
 ALLOWED_HOSTS = [
